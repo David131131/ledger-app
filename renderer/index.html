@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:" />
+  <title>做账</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand" data-i18n="app.brand">📒 做账</div>
+    <nav class="tabs">
+      <button class="tab active" data-tab="add" data-i18n="nav.add">记一笔</button>
+      <button class="tab" data-tab="records" data-i18n="nav.records">明细</button>
+      <button class="tab" data-tab="report" data-period="week" data-i18n="nav.week">周报</button>
+      <button class="tab" data-tab="report" data-period="month" data-i18n="nav.month">月报</button>
+      <button class="tab" data-tab="report" data-period="quarter" data-i18n="nav.quarter">季报</button>
+    </nav>
+    <div class="topbar-right">
+      <button id="btn-settings" class="icon-btn" data-i18n-title="settings.title">⚙️</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- ============ 记一笔 ============ -->
+    <section id="page-add" class="page active">
+      <div class="grid-add">
+        <form id="form-add" class="card form-card" autocomplete="off">
+          <h2 data-i18n="add.title">记一笔</h2>
+
+          <div class="type-switch" id="type-switch">
+            <button type="button" data-type="expense" class="seg active" data-i18n="type.expense">支出</button>
+            <button type="button" data-type="income" class="seg" data-i18n="type.income">收入</button>
+          </div>
+
+          <div class="amount-row">
+            <span class="currency" id="f-currency-symbol">¥</span>
+            <input id="f-amount" type="number" min="0" step="0.01" placeholder="0.00" required />
+            <div class="cur-switch" id="f-currency-switch">
+              <button type="button" data-cur="CNY" class="seg small active">¥</button>
+              <button type="button" data-cur="USD" class="seg small">$</button>
+            </div>
+          </div>
+
+          <label class="field"><span data-i18n="add.date">日期</span>
+            <input id="f-date" type="date" required />
+          </label>
+
+          <label class="field"><span data-i18n="add.category">分类</span>
+            <input id="f-category" list="cat-expense" data-i18n-ph="add.categoryPh" placeholder="如：餐饮 / 购物" required />
+          </label>
+          <datalist id="cat-expense"></datalist>
+          <datalist id="cat-income"></datalist>
+
+          <label class="field"><span data-i18n="add.path">消费路径</span>
+            <input id="f-path" data-i18n-ph="add.pathPh" placeholder="如：淘宝 / 楼下超市（可选）" />
+          </label>
+
+          <label class="field"><span data-i18n="add.note">备注</span>
+            <input id="f-note" data-i18n-ph="add.notePh" placeholder="（可选）" />
+          </label>
+
+          <button class="btn-primary" type="submit" data-i18n="add.save">保存</button>
+        </form>
+
+        <div class="card overview-card">
+          <h3 data-i18n="add.overviewTitle">本月速览</h3>
+          <div class="ov-row"><span data-i18n="add.overviewExpense">本月支出</span><b id="ov-expense" class="c-expense">¥0.00</b></div>
+          <div class="ov-row"><span data-i18n="add.overviewIncome">本月收入</span><b id="ov-income" class="c-income">¥0.00</b></div>
+          <div class="ov-row"><span data-i18n="add.overviewBalance">本月结余</span><b id="ov-balance">¥0.00</b></div>
+          <div class="ov-row"><span data-i18n="add.overviewCount">本月笔数</span><b id="ov-count">0</b></div>
+          <p class="ov-tip" data-i18n="add.overviewTip">数据保存在本机 SQLite 数据库（WAL 模式），离线可用。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 明细 ============ -->
+    <section id="page-records" class="page">
+      <div class="records-head card">
+        <div class="period-nav">
+          <button class="btn-icon" id="rec-prev">‹</button>
+          <div class="period-title" id="rec-title">2025年8月</div>
+          <button class="btn-icon" id="rec-next">›</button>
+          <button class="btn-ghost" id="rec-today" data-i18n="records.backThisMonth">回到本月</button>
+        </div>
+        <div class="chips">
+          <div class="chip"><span data-i18n="type.expenseLabel">支出</span> <b id="rec-expense" class="c-expense">¥0.00</b></div>
+          <div class="chip"><span data-i18n="type.incomeLabel">收入</span> <b id="rec-income" class="c-income">¥0.00</b></div>
+          <div class="chip"><span data-i18n="records.balance">结余</span> <b id="rec-balance">¥0.00</b></div>
+          <div class="chip"><span data-i18n="records.count">笔数</span> <b id="rec-count">0</b></div>
+        </div>
+      </div>
+
+      <div class="card table-card">
+        <table class="records-table">
+          <thead>
+            <tr>
+              <th data-i18n="records.id">编号</th><th data-i18n="add.date">日期</th><th data-i18n="records.amount">金额</th>
+              <th data-i18n="add.category">分类</th><th data-i18n="records.type">类型</th>
+              <th data-i18n="add.path">消费路径</th><th data-i18n="add.note">备注</th><th data-i18n="records.created">创建时间</th><th data-i18n="records.actions">操作</th>
+            </tr>
+          </thead>
+          <tbody id="records-tbody"></tbody>
+        </table>
+        <div id="records-empty" class="empty hidden" data-i18n="records.empty">该时间段暂无记录</div>
+      </div>
+    </section>
+
+    <!-- ============ 周/月/季报 ============ -->
+    <section id="page-report" class="page">
+      <div class="card report-nav">
+        <button class="btn-icon" id="rp-prev">‹</button>
+        <div class="period-title" id="rp-title">本周</div>
+        <button class="btn-icon" id="rp-next">›</button>
+        <button class="btn-ghost" id="rp-today">回到本期</button>
+      </div>
+
+      <div class="card summary-card">
+        <p id="summary-sentence">…</p>
+      </div>
+
+      <div class="stat-cards" id="stat-cards"></div>
+
+      <div class="charts">
+        <div class="card chart-card">
+          <h3 id="line-title">支出 / 收入趋势</h3>
+          <div id="chart-line" class="chart"></div>
+        </div>
+        <div class="card chart-card">
+          <h3 data-i18n="report.pieTitle">分类占比</h3>
+          <div class="pie-toggle">
+            <button id="pie-expense" class="seg small active"></button>
+            <button id="pie-income" class="seg small"></button>
+          </div>
+          <div id="chart-pie" class="chart"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============ 编辑弹窗 ============ -->
+  <div id="modal" class="modal hidden">
+    <div class="modal-mask"></div>
+    <form id="form-edit" class="card modal-card" autocomplete="off">
+      <h3 data-i18n="records.editTitle">编辑记录</h3>
+      <div class="type-switch" id="edit-type-switch">
+        <button type="button" data-type="expense" class="seg active" data-i18n="type.expense">支出</button>
+        <button type="button" data-type="income" class="seg" data-i18n="type.income">收入</button>
+      </div>
+      <div class="amount-row">
+        <span class="currency" id="e-currency-symbol">¥</span>
+        <input id="e-amount" type="number" min="0" step="0.01" placeholder="0.00" required />
+        <div class="cur-switch" id="e-currency-switch">
+          <button type="button" data-cur="CNY" class="seg small active">¥</button>
+          <button type="button" data-cur="USD" class="seg small">$</button>
+        </div>
+      </div>
+      <label class="field"><span data-i18n="add.date">日期</span> <input id="e-date" type="date" required /></label>
+      <label class="field"><span data-i18n="add.category">分类</span> <input id="e-category" list="cat-expense" required /></label>
+      <label class="field"><span data-i18n="add.path">消费路径</span> <input id="e-path" data-i18n-ph="add.pathPh" /></label>
+      <label class="field"><span data-i18n="add.note">备注</span> <input id="e-note" data-i18n-ph="add.notePh" /></label>
+      <div class="modal-actions">
+        <button type="button" class="btn-ghost" id="edit-cancel" data-i18n="common.cancel">取消</button>
+        <button type="submit" class="btn-primary" data-i18n="records.saveEdit">保存修改</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- ============ 设置弹窗 ============ -->
+  <div id="modal-settings" class="modal hidden">
+    <div class="modal-mask" id="settings-mask"></div>
+    <div class="card modal-card">
+      <h3 data-i18n="settings.title">设置 / Settings</h3>
+
+      <div class="set-row">
+        <label data-i18n="settings.lang">语言 / Language</label>
+        <div class="type-switch" id="set-lang">
+          <button type="button" class="seg" data-lang="zh">中文</button>
+          <button type="button" class="seg" data-lang="en">English</button>
+        </div>
+      </div>
+
+      <div class="set-row">
+        <label data-i18n="settings.currency">显示货币 / Display currency</label>
+        <div class="type-switch" id="set-currency">
+          <button type="button" class="seg" data-cur="CNY">¥ CNY</button>
+          <button type="button" class="seg" data-cur="USD">$ USD</button>
+        </div>
+      </div>
+
+      <div class="set-row rate-box">
+        <label data-i18n="settings.rate">当日汇率 / Exchange rate</label>
+        <div id="rate-display" class="rate-display">1 USD ≈ 7.2000 CNY</div>
+        <div class="rate-actions">
+          <button id="btn-refresh-rate" class="btn-ghost" data-i18n="settings.refresh">刷新汇率</button>
+          <input id="rate-manual" type="number" step="0.0001" min="0.01" data-i18n-ph="settings.ratePh" placeholder="手动设置 1 USD = ? CNY" />
+          <button id="btn-save-rate" class="btn-ghost" data-i18n="common.save">保存</button>
+          <button id="btn-clear-rate" class="btn-ghost hidden" data-i18n="settings.clearManual">清除手动</button>
+        </div>
+        <p class="ov-tip" data-i18n="settings.rateTip">混合币种的账单会按此汇率统一折算，并以 ≈ 标注近似值。</p>
+      </div>
+
+      <div class="set-row">
+        <label data-i18n="settings.data">数据 / Data</label>
+        <div class="rate-actions">
+          <button id="btn-export-csv" class="btn-ghost" data-i18n="settings.exportCsv">导出 CSV</button>
+          <button id="btn-backup-db" class="btn-ghost" data-i18n="settings.backupDb">备份数据库</button>
+        </div>
+        <p class="ov-tip" data-i18n="settings.dataTip">CSV 带 UTF-8 BOM，可用 Excel/Numbers 直接打开；数据库备份为完整快照。</p>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn-primary" id="settings-close" data-i18n="common.close">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="../node_modules/echarts/dist/echarts.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

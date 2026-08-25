@@ -1,0 +1,10 @@
+node_modules/
+.npm-cache/
+.electron-cache/
+.icon-tools/
+.home/
+.node-gyp/
+dist/
+out/
+*.log
+.DS_Store
