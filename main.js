@@ -575,6 +575,22 @@ async function runSmoke() {
 
 /* ---------------- 启动 ---------------- */
 
+// 单实例锁：双击多次不会开多个窗口，第二次启动会聚焦已有窗口
+if (!IS_SMOKE) {
+  const gotLock = app.requestSingleInstanceLock();
+  if (!gotLock) {
+    app.quit();
+  } else {
+    app.on('second-instance', () => {
+      if (mainWindow) {
+        if (mainWindow.isMinimized()) mainWindow.restore();
+        mainWindow.show();
+        mainWindow.focus();
+      }
+    });
+  }
+}
+
 app.whenReady().then(() => {
   registerIpc();
   if (IS_SMOKE) {
