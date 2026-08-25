@@ -538,6 +538,26 @@ async function runSmoke() {
     check(rpt.rankTitle.length > 0, `排行图标题: ${rpt.rankTitle}`);
     check(rpt.budgetHidden === true, '周报不显示预算卡');
     check(typeof rpt.lineTitle === 'string' && rpt.lineTitle.length > 0, `折线图标题: ${rpt.lineTitle}`);
+
+    // 设置面板：切换语言/货币时高亮应跟随移动
+    const seg = await win.webContents.executeJavaScript(`
+      (async () => {
+        document.querySelector('#btn-settings').click();
+        await new Promise((r) => setTimeout(r, 300));
+        const langBefore = document.querySelector('#set-lang .seg.active')?.dataset.lang;
+        document.querySelector('#set-lang .seg[data-lang="zh"]').click();
+        await new Promise((r) => setTimeout(r, 500));
+        const langAfter = document.querySelector('#set-lang .seg.active')?.dataset.lang;
+        const curBefore = document.querySelector('#set-currency .seg.active')?.dataset.cur;
+        document.querySelector('#set-currency .seg[data-cur="USD"]').click();
+        await new Promise((r) => setTimeout(r, 500));
+        const curAfter = document.querySelector('#set-currency .seg.active')?.dataset.cur;
+        document.querySelector('#settings-close').click();
+        return { langBefore, langAfter, curBefore, curAfter };
+      })()
+    `);
+    check(seg.langAfter === 'zh', `语言高亮随点击移动: ${seg.langBefore} -> ${seg.langAfter}`);
+    check(seg.curAfter === 'USD', `货币高亮随点击移动: ${seg.curBefore} -> ${seg.curAfter}`);
     win.destroy();
 
     console.log(failures === 0 ? '\n[smoke] ALL OK' : `\n[smoke] FAILED (${failures})`);

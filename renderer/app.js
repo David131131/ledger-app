@@ -1125,6 +1125,9 @@ function closeSettings() {
 async function changeLang(lang) {
   if (lang === state.lang) return;
   state.lang = lang;
+  document.querySelectorAll('#set-lang .seg').forEach((b) =>
+    b.classList.toggle('active', b.dataset.lang === lang)
+  );
   applyI18n();
   try { await window.api.setSetting('lang', lang); } catch (err) { console.error(err); }
   switchTab(state.tab, state.reportPeriod);
@@ -1133,6 +1136,9 @@ async function changeLang(lang) {
 async function changeCurrency(cur) {
   if (cur === state.currency) return;
   state.currency = cur;
+  document.querySelectorAll('#set-currency .seg').forEach((b) =>
+    b.classList.toggle('active', b.dataset.cur === cur)
+  );
   try { await window.api.setSetting('currency', cur); } catch (err) { console.error(err); }
   switchTab(state.tab, state.reportPeriod);
 }
