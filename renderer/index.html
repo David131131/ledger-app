@@ -15,6 +15,7 @@
       <button class="tab" data-tab="report" data-period="week" data-i18n="nav.week">周报</button>
       <button class="tab" data-tab="report" data-period="month" data-i18n="nav.month">月报</button>
       <button class="tab" data-tab="report" data-period="quarter" data-i18n="nav.quarter">季报</button>
+      <button class="tab" data-tab="report" data-period="year" data-i18n="nav.annual">年报</button>
     </nav>
     <div class="topbar-right">
       <button id="btn-settings" class="icon-btn" data-i18n-title="settings.title">⚙️</button>
@@ -91,6 +92,25 @@
         </div>
       </div>
 
+      <div class="filter-bar card">
+        <input id="rec-keyword" data-i18n-ph="records.searchPh" placeholder="搜索分类 / 路径 / 备注…" />
+        <select id="rec-cat"><option value="" data-i18n="records.filterAll">全部分类</option></select>
+        <select id="rec-type">
+          <option value="" data-i18n="records.filterTypeAll">全部类型</option>
+          <option value="expense" data-i18n="type.expense">支出</option>
+          <option value="income" data-i18n="type.income">收入</option>
+        </select>
+        <select id="rec-cur">
+          <option value="" data-i18n="records.filterCurAll">全部币种</option>
+          <option value="CNY">¥ CNY</option>
+          <option value="USD">$ USD</option>
+        </select>
+        <input id="rec-start" type="date" />
+        <span class="range-sep">~</span>
+        <input id="rec-end" type="date" />
+        <button class="btn-ghost" id="rec-reset" data-i18n="records.resetFilters">重置</button>
+      </div>
+
       <div class="card table-card">
         <table class="records-table">
           <thead>
@@ -121,6 +141,11 @@
 
       <div class="stat-cards" id="stat-cards"></div>
 
+      <div class="card budget-card hidden" id="budget-card">
+        <h3 data-i18n="report.budgetTitle">预算进度</h3>
+        <div class="budget-bars" id="budget-bars"></div>
+      </div>
+
       <div class="charts">
         <div class="card chart-card">
           <h3 id="line-title">支出 / 收入趋势</h3>
@@ -133,6 +158,10 @@
             <button id="pie-income" class="seg small"></button>
           </div>
           <div id="chart-pie" class="chart"></div>
+        </div>
+        <div class="card chart-card rank-card">
+          <h3 id="rank-title">消费排行</h3>
+          <div id="chart-rank" class="chart"></div>
         </div>
       </div>
     </section>
@@ -198,6 +227,20 @@
           <button id="btn-clear-rate" class="btn-ghost hidden" data-i18n="settings.clearManual">清除手动</button>
         </div>
         <p class="ov-tip" data-i18n="settings.rateTip">混合币种的账单会按此汇率统一折算，并以 ≈ 标注近似值。</p>
+      </div>
+
+      <div class="set-row">
+        <label data-i18n="settings.budget">预算 / Budget</label>
+        <div class="budget-row">
+          <input id="budget-total" type="number" min="0" step="0.01" data-i18n-ph="settings.budgetTotalPh" placeholder="每月总预算（0 表示不设置）" />
+          <span class="budget-label" data-i18n="settings.budgetTotal">每月总预算</span>
+        </div>
+        <div id="budget-cats"></div>
+        <div class="rate-actions">
+          <button id="btn-add-budget-cat" class="btn-ghost" type="button" data-i18n="settings.budgetAdd">+ 添加分类预算</button>
+          <button id="btn-save-budget" class="btn-ghost" type="button" data-i18n="common.save">保存预算</button>
+        </div>
+        <p class="ov-tip" data-i18n="settings.budgetTip">预算按当前显示货币计价；月报显示进度条，超支变红。</p>
       </div>
 
       <div class="set-row">

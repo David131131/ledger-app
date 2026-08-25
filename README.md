@@ -121,6 +121,14 @@ node-gyp 源码编译会失败，因此 `npm run rebuild` 使用 `scripts/fetch-
 > 重新构建：`clang -O2 -o launcher scripts/launcher.c && codesign --force --deep -s - 做账.app`，
 > 复制到桌面后执行 `lsregister -f ~/Desktop/做账.app` 并 `touch` 一下。
 
+## Git 与 GitHub
+
+- 仓库：<https://github.com/David131131/ledger-app>（v1.0.0 已发布 Release）
+- 部分网络环境 git 传输到 github.com 会被干扰，拉取代码可用代理：
+  ```bash
+  git -c url."https://ghfast.top/https://github.com/".insteadOf="https://github.com/" fetch origin main
+  ```
+
 ## 统计口径
 
 - **周**：周一至周日（ISO 周），环比上周

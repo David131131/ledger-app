@@ -44,6 +44,7 @@ const I18N = {
     'nav.week': '周报',
     'nav.month': '月报',
     'nav.quarter': '季报',
+    'nav.annual': '年报',
     'type.expense': '支出',
     'type.income': '收入',
     'type.expenseLabel': '支出',
@@ -78,11 +79,22 @@ const I18N = {
     'records.saveEdit': '保存修改',
     'records.confirmDelete': '确定删除这条记录吗？删除后不可恢复。',
     'records.monthLabel': '{y}年{m}月',
+    'records.searchPh': '搜索分类 / 路径 / 备注…',
+    'records.filterAll': '全部分类',
+    'records.filterTypeAll': '全部类型',
+    'records.filterCurAll': '全部币种',
+    'records.resetFilters': '重置',
     'report.backThis': '回到本期',
     'report.pieTitle': '分类占比',
     'report.chartWeek': '本周 / 上周支出对比',
     'report.chartMonth': '每日支出 / 收入趋势',
     'report.chartQuarter': '每周支出 / 收入趋势',
+    'report.chartYear': '每月支出 / 收入趋势',
+    'report.rankTitle': '消费排行 Top {n}',
+    'report.budgetTitle': '预算进度',
+    'report.budgetTotalLabel': '本月总支出',
+    'report.budgetOver': '超支 {money}',
+    'report.budgetLeft': '剩余 {money}',
     'report.seriesCurWeek': '本周支出',
     'report.seriesPrevWeek': '上周支出',
     'report.seriesExpense': '支出',
@@ -109,6 +121,12 @@ const I18N = {
     'settings.clearManual': '清除手动',
     'settings.ratePh': '手动设置 1 USD = ? CNY',
     'settings.rateTip': '混合币种的账单会按此汇率统一折算，并以 ≈ 标注近似值。',
+    'settings.budget': '预算 / Budget',
+    'settings.budgetTotal': '每月总预算',
+    'settings.budgetTotalPh': '每月总预算（0 表示不设置）',
+    'settings.budgetCatPh': '分类名',
+    'settings.budgetAdd': '+ 添加分类预算',
+    'settings.budgetTip': '预算按当前显示货币计价；月报显示进度条，超支变红。',
     'settings.data': '数据 / Data',
     'settings.exportCsv': '导出 CSV',
     'settings.backupDb': '备份数据库',
@@ -139,6 +157,7 @@ const I18N = {
     'toast.exportFailed': '导出失败：{msg}',
     'toast.backupDone': '已备份数据库：{path}',
     'toast.backupFailed': '备份失败：{msg}',
+    'toast.budgetSaved': '预算已保存 ✓',
   },
   en: {
     'app.brand': '📒 Ledger',
@@ -147,6 +166,7 @@ const I18N = {
     'nav.week': 'Weekly',
     'nav.month': 'Monthly',
     'nav.quarter': 'Quarterly',
+    'nav.annual': 'Annual',
     'type.expense': 'Expense',
     'type.income': 'Income',
     'type.expenseLabel': 'Expense',
@@ -181,11 +201,22 @@ const I18N = {
     'records.saveEdit': 'Save Changes',
     'records.confirmDelete': 'Delete this record? This cannot be undone.',
     'records.monthLabel': '{m} {y}',
+    'records.searchPh': 'Search category / where / note…',
+    'records.filterAll': 'All categories',
+    'records.filterTypeAll': 'All types',
+    'records.filterCurAll': 'All currencies',
+    'records.resetFilters': 'Reset',
     'report.backThis': 'Back to current period',
     'report.pieTitle': 'By Category',
     'report.chartWeek': 'This Week vs Last Week',
     'report.chartMonth': 'Daily Spending / Income',
     'report.chartQuarter': 'Weekly Spending / Income',
+    'report.chartYear': 'Monthly Spending / Income',
+    'report.rankTitle': 'Top {n} Categories',
+    'report.budgetTitle': 'Budget Progress',
+    'report.budgetTotalLabel': 'Monthly total',
+    'report.budgetOver': 'Over by {money}',
+    'report.budgetLeft': '{money} left',
     'report.seriesCurWeek': 'This Week',
     'report.seriesPrevWeek': 'Last Week',
     'report.seriesExpense': 'Spending',
@@ -212,6 +243,12 @@ const I18N = {
     'settings.clearManual': 'Clear Manual',
     'settings.ratePh': 'Manual rate: 1 USD = ? CNY',
     'settings.rateTip': 'Mixed-currency bills are converted at this rate and marked with ≈ as approximate.',
+    'settings.budget': 'Budget / 预算',
+    'settings.budgetTotal': 'Monthly total budget',
+    'settings.budgetTotalPh': 'Monthly total budget (0 = not set)',
+    'settings.budgetCatPh': 'Category name',
+    'settings.budgetAdd': '+ Add category budget',
+    'settings.budgetTip': 'Budgets are in the display currency; the monthly report shows progress bars, red when over.',
     'settings.data': 'Data / 数据',
     'settings.exportCsv': 'Export CSV',
     'settings.backupDb': 'Back Up Database',
@@ -242,6 +279,7 @@ const I18N = {
     'toast.exportFailed': 'Export failed: {msg}',
     'toast.backupDone': 'Database backed up: {path}',
     'toast.backupFailed': 'Backup failed: {msg}',
+    'toast.budgetSaved': 'Budget saved ✓',
   },
 };
 
@@ -315,15 +353,27 @@ const state = {
   lang: 'zh',
   currency: 'CNY',
   rate: { value: 7.2, source: 'default', updatedAt: '', manual: '' },
+  budget: { total: 0, categories: [] },
+  recFilters: { keyword: '', category: '', type: '', currency: '', start: '', end: '' },
   anchors: {
     week: today,
     month: new Date(today.getFullYear(), today.getMonth(), 1),
     quarter: new Date(today.getFullYear(), Math.floor(today.getMonth() / 3) * 3, 1),
+    year: new Date(today.getFullYear(), 0, 1),
     records: new Date(today.getFullYear(), today.getMonth(), 1),
   },
-  charts: { line: null, pie: null },
+  charts: { line: null, pie: null, rank: null },
   lastReport: null,
 };
+
+const darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
+
+/** ECharts 用主题色（跟随系统深浅色） */
+function chartTheme() {
+  return darkQuery.matches
+    ? { axisLabel: '#8b95a5', splitLine: '#232b35', axisLine: '#2b333d', legend: '#98a2b3', center: '#e8ecf2', noData: '#98a2b3' }
+    : { axisLabel: '#667085', splitLine: '#f1f3f7', axisLine: '#e6e9f0', legend: '#667085', center: '#1f2430', noData: '#98a2b3' };
+}
 
 const EXPENSE_COLOR = '#ef4444';
 const INCOME_COLOR = '#10b981';
@@ -332,8 +382,8 @@ const PALETTE = ['#f87171', '#fb923c', '#fbbf24', '#34d399', '#22d3ee', '#818cf8
 /* ================= 总结文案（双语 + 统一货币） ================= */
 
 const PERIOD_NAMES = {
-  zh: { week: ['本周', '上周'], month: ['本月', '上月'], quarter: ['本季度', '上季度'] },
-  en: { week: ['this week', 'last week'], month: ['this month', 'last month'], quarter: ['this quarter', 'last quarter'] },
+  zh: { week: ['本周', '上周'], month: ['本月', '上月'], quarter: ['本季度', '上季度'], year: ['本年', '去年'] },
+  en: { week: ['this week', 'last week'], month: ['this month', 'last month'], quarter: ['this quarter', 'last quarter'], year: ['this year', 'last year'] },
 };
 
 /**
@@ -496,12 +546,6 @@ async function refreshOverview() {
 
 /* ================= 明细 ================= */
 
-function monthRange(anchor) {
-  const start = new Date(anchor.getFullYear(), anchor.getMonth(), 1);
-  const end = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0);
-  return { start, end };
-}
-
 function monthLabel(anchor) {
   const zh = state.lang === 'zh';
   if (zh) return t('records.monthLabel', { y: anchor.getFullYear(), m: anchor.getMonth() + 1 });
@@ -509,23 +553,67 @@ function monthLabel(anchor) {
   return t('records.monthLabel', { y: anchor.getFullYear(), m: name });
 }
 
+/** 把记录金额折算到显示币种 */
+function toDisplay(amt, cur) {
+  const c = cur === 'USD' ? 'USD' : 'CNY';
+  if (c === state.currency) return amt;
+  return state.currency === 'CNY' ? amt * state.rate.value : amt / state.rate.value;
+}
+
+/** 设置筛选日期区间为某个月，并同步日期输入框 */
+function setRecRange(anchor) {
+  const start = new Date(anchor.getFullYear(), anchor.getMonth(), 1);
+  const end = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0);
+  state.recFilters.start = toStr(start);
+  state.recFilters.end = toStr(end);
+  $('#rec-start').value = state.recFilters.start;
+  $('#rec-end').value = state.recFilters.end;
+}
+
 async function renderRecords() {
-  const anchor = state.anchors.records;
-  const { start, end } = monthRange(anchor);
-  $('#rec-title').textContent = monthLabel(anchor);
+  const f = state.recFilters;
+  const [sy, sm, sd] = f.start.split('-').map(Number);
+  const [ey, em, ed] = f.end.split('-').map(Number);
+  const isWholeMonth = sy === ey && sm === em && sd === 1 && ed === new Date(sy, sm, 0).getDate();
+  $('#rec-title').textContent = isWholeMonth ? monthLabel(new Date(sy, sm - 1, 1)) : `${f.start} ~ ${f.end}`;
 
   try {
-    const [rows, ov] = await Promise.all([
-      window.api.listRecords({ start: toStr(start), end: toStr(end) }),
-      window.api.overview({ start: toStr(start), end: toStr(end) }, state.currency, state.rate.value),
+    const [rows, cats] = await Promise.all([
+      window.api.queryRecords(f),
+      window.api.listCategories(),
     ]);
-    const approx = ov.unified ? t('report.approx') : '';
-    $('#rec-expense').textContent = `${approx}${fmtMoney(ov.expense, state.currency)}`;
-    $('#rec-income').textContent = `${approx}${fmtMoney(ov.income, state.currency)}`;
-    const bal = ov.income - ov.expense;
+
+    // 分类下拉（保留当前选择）
+    const sel = $('#rec-cat');
+    const cur = f.category;
+    sel.innerHTML =
+      `<option value="">${t('records.filterAll')}</option>` +
+      cats.map((c) => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+    if (cur && !cats.includes(cur)) {
+      sel.innerHTML += `<option value="${esc(cur)}">${esc(cur)}</option>`;
+    }
+    sel.value = cur;
+
+    // 汇总（按显示币种折算）
+    let exp = 0;
+    let inc = 0;
+    let hasCNY = false;
+    let hasUSD = false;
+    for (const r of rows) {
+      const v = toDisplay(r.amount, r.currency);
+      if (r.type === 'expense') exp += v;
+      else inc += v;
+      if (r.currency === 'USD') hasUSD = true;
+      else hasCNY = true;
+    }
+    const unified = hasCNY && hasUSD;
+    const approx = unified ? t('report.approx') : '';
+    $('#rec-expense').textContent = `${approx}${fmtMoney(exp, state.currency)}`;
+    $('#rec-income').textContent = `${approx}${fmtMoney(inc, state.currency)}`;
+    const bal = inc - exp;
     $('#rec-balance').textContent = `${approx}${fmtMoney(bal, state.currency)}`;
     $('#rec-balance').className = bal >= 0 ? 'c-income' : 'c-expense';
-    $('#rec-count').textContent = ov.count;
+    $('#rec-count').textContent = rows.length;
 
     const tbody = $('#records-tbody');
     if (rows.length === 0) {
@@ -540,15 +628,15 @@ async function renderRecords() {
       const converted =
         recCur === state.currency
           ? ''
-          : ` <span class="converted">(${fmtMoney(recCur === 'CNY' ? r.amount / state.rate.value : r.amount * state.rate.value, state.currency)})</span>`;
+          : ` <span class="converted">(${fmtMoney(toDisplay(r.amount, recCur), state.currency)})</span>`;
       return `<tr>
         <td>${r.id}</td>
         <td>${esc(r.date)}</td>
         <td class="${isExpense ? 'c-expense' : 'c-income'}">${isExpense ? '-' : '+'}${fmtMoney(r.amount, recCur)}${converted}</td>
         <td>${esc(r.category)}</td>
         <td>${isExpense ? t('type.expense') : t('type.income')}</td>
-        <td>${esc(r.path) || '<span style="color:#c0c6d1">—</span>'}</td>
-        <td title="${esc(r.note)}">${esc(r.note) || '<span style="color:#c0c6d1">—</span>'}</td>
+        <td>${esc(r.path) || '<span style="color:var(--faint)">—</span>'}</td>
+        <td title="${esc(r.note)}">${esc(r.note) || '<span style="color:var(--faint)">—</span>'}</td>
         <td>${esc(r.created_time)}</td>
         <td><div class="row-actions">
           <button class="link-btn" data-edit="${r.id}">${t('records.edit')}</button>
@@ -580,8 +668,17 @@ async function removeRecord(id) {
 }
 
 function shiftRecordsMonth(delta) {
-  const a = state.anchors.records;
-  state.anchors.records = new Date(a.getFullYear(), a.getMonth() + delta, 1);
+  const [y, m] = state.recFilters.start.split('-').map(Number);
+  setRecRange(new Date(y, m - 1 + delta, 1));
+  renderRecords();
+}
+
+function resetRecFilters() {
+  state.recFilters = { keyword: '', category: '', type: '', currency: '', start: '', end: '' };
+  $('#rec-keyword').value = '';
+  $('#rec-type').value = '';
+  $('#rec-cur').value = '';
+  setRecRange(today);
   renderRecords();
 }
 
@@ -649,8 +746,10 @@ function shiftAnchor(delta) {
     state.anchors[p] = x;
   } else if (p === 'month') {
     state.anchors[p] = new Date(a.getFullYear(), a.getMonth() + delta, 1);
-  } else {
+  } else if (p === 'quarter') {
     state.anchors[p] = new Date(a.getFullYear(), a.getMonth() + delta * 3, 1);
+  } else {
+    state.anchors[p] = new Date(a.getFullYear() + delta, 0, 1);
   }
   renderReport();
 }
@@ -676,12 +775,14 @@ function periodLabel(report) {
   if (zh) {
     if (report.period === 'week') return `${report.isoYear}年 第${report.weekNum}周（${sm}月${sd}日 - ${em}月${ed}日）`;
     if (report.period === 'month') return `${sy}年${sm}月`;
+    if (report.period === 'year') return `${sy}年`;
     const q = Math.floor((sm - 1) / 3) + 1;
     return `${sy}年 第${q}季度（${sm}月 - ${em}月）`;
   }
   const mName = (m) => new Date(2000, m - 1, 1).toLocaleDateString('en-US', { month: 'short' });
   if (report.period === 'week') return `Week ${report.weekNum}, ${report.isoYear} (${mName(sm)} ${sd} - ${mName(em)} ${ed})`;
   if (report.period === 'month') return `${mName(sm)} ${sy}`;
+  if (report.period === 'year') return `${sy}`;
   const q = Math.floor((sm - 1) / 3) + 1;
   return `Q${q} ${sy} (${mName(sm)} - ${mName(em)})`;
 }
@@ -691,12 +792,15 @@ function xLabels(points, period) {
   const weekNames = zh
     ? ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
     : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const enMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   if (period === 'week') return points.map((p) => weekNames[p.dow]);
   if (period === 'month') return points.map((p) => (zh ? `${p.day}日` : `${p.day}`));
+  if (period === 'year') return points.map((p) => (zh ? `${p.m}月` : enMonths[p.m - 1]));
   return points.map((p) => `${p.m}/${p.d}`);
 }
 
 function buildLineOption(points, prevPoints, period, currency) {
+  const th = chartTheme();
   const sym = CUR[currency].symbol;
   const labels = xLabels(points, period);
   const series = [];
@@ -758,50 +862,51 @@ function buildLineOption(points, prevPoints, period, currency) {
   const hasData = points.some((p) => p.expense > 0 || p.income > 0) ||
     (prevPoints || []).some((p) => p.expense > 0);
   return {
-    title: hasData ? undefined : { text: t('report.noData'), left: 'center', top: 'middle', textStyle: { color: '#98a2b3', fontSize: 14 } },
+    title: hasData ? undefined : { text: t('report.noData'), left: 'center', top: 'middle', textStyle: { color: th.noData, fontSize: 14 } },
     tooltip: {
       trigger: 'axis',
       valueFormatter: (v) => (v == null ? '-' : `${sym}${fmtNum(v)}`),
     },
-    legend: { top: 0, right: 0, textStyle: { color: '#667085' } },
+    legend: { top: 0, right: 0, textStyle: { color: th.legend } },
     grid: { left: 8, right: 16, top: 36, bottom: 8, containLabel: true },
     xAxis: {
       type: 'category',
       data: labels,
       boundaryGap: false,
-      axisLine: { lineStyle: { color: '#e6e9f0' } },
+      axisLine: { lineStyle: { color: th.axisLine } },
       axisTick: { show: false },
-      axisLabel: { color: '#667085' },
+      axisLabel: { color: th.axisLabel },
     },
     yAxis: {
       type: 'value',
       name: currency,
-      nameTextStyle: { color: '#98a2b3' },
-      splitLine: { lineStyle: { color: '#f1f3f7' } },
-      axisLabel: { color: '#98a2b3' },
+      nameTextStyle: { color: th.noData },
+      splitLine: { lineStyle: { color: th.splitLine } },
+      axisLabel: { color: th.axisLabel },
     },
     series,
   };
 }
 
 function buildPieOption(items, total, currency) {
+  const th = chartTheme();
   const sym = CUR[currency].symbol;
   const hasData = items.length > 0 && total > 0;
   return {
-    title: hasData ? undefined : { text: t('report.noData'), left: 'center', top: 'middle', textStyle: { color: '#98a2b3', fontSize: 14 } },
+    title: hasData ? undefined : { text: t('report.noData'), left: 'center', top: 'middle', textStyle: { color: th.noData, fontSize: 14 } },
     color: PALETTE,
     tooltip: { trigger: 'item', valueFormatter: (v) => `${sym}${fmtNum(v)}` },
-    legend: { bottom: 0, textStyle: { color: '#667085' }, icon: 'circle' },
+    legend: { bottom: 0, textStyle: { color: th.legend }, icon: 'circle' },
     graphic: hasData ? [{
       type: 'text',
       left: 'center',
       top: '40%',
-      style: { text: `${sym}${fmtPlain(total)}`, textAlign: 'center', fontSize: 18, fontWeight: 700, fill: '#1f2430' },
+      style: { text: `${sym}${fmtPlain(total)}`, textAlign: 'center', fontSize: 18, fontWeight: 700, fill: th.center },
     }, {
       type: 'text',
       left: 'center',
       top: '48%',
-      style: { text: t('report.pieTitle'), textAlign: 'center', fontSize: 12, fill: '#98a2b3' },
+      style: { text: t('report.pieTitle'), textAlign: 'center', fontSize: 12, fill: th.noData },
     }] : [],
     series: [{
       type: 'pie',
@@ -809,8 +914,45 @@ function buildPieOption(items, total, currency) {
       center: ['50%', '44%'],
       avoidLabelOverlap: true,
       itemStyle: { borderColor: '#fff', borderWidth: 2, borderRadius: 4 },
-      label: { formatter: '{b}\n{d}%', color: '#667085' },
+      label: { formatter: '{b}\n{d}%', color: th.legend },
       data: items.map((c) => ({ name: c.name, value: c.value })),
+    }],
+  };
+}
+
+/** 消费排行横向条形图（Top N） */
+function buildRankOption(items, currency, topN = 8) {
+  const th = chartTheme();
+  const sym = CUR[currency].symbol;
+  const top = items.slice(0, topN).slice().reverse();
+  const hasData = top.length > 0;
+  return {
+    title: hasData ? undefined : { text: t('report.noData'), left: 'center', top: 'middle', textStyle: { color: th.noData, fontSize: 14 } },
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, valueFormatter: (v) => `${sym}${fmtNum(v)}` },
+    grid: { left: 8, right: 56, top: 8, bottom: 8, containLabel: true },
+    xAxis: {
+      type: 'value',
+      axisLabel: { color: th.axisLabel },
+      splitLine: { lineStyle: { color: th.splitLine } },
+    },
+    yAxis: {
+      type: 'category',
+      data: top.map((c) => c.name),
+      axisLabel: { color: th.axisLabel },
+      axisLine: { lineStyle: { color: th.axisLine } },
+      axisTick: { show: false },
+    },
+    series: [{
+      type: 'bar',
+      data: top.map((c) => c.value),
+      barWidth: 16,
+      itemStyle: {
+        borderRadius: [0, 8, 8, 0],
+        color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+          { offset: 0, color: '#818cf8' },
+          { offset: 1, color: '#4f46e5' },
+        ]),
+      },
     }],
   };
 }
@@ -826,9 +968,11 @@ async function renderReport() {
     $('#rp-today').textContent = t('report.backThis');
     $('#summary-sentence').textContent = buildSummaryText(report, state.lang);
     $('#line-title').textContent =
-      p === 'week' ? t('report.chartWeek') : p === 'month' ? t('report.chartMonth') : t('report.chartQuarter');
+      p === 'week' ? t('report.chartWeek') : p === 'month' ? t('report.chartMonth') : p === 'quarter' ? t('report.chartQuarter') : t('report.chartYear');
+    $('#rank-title').textContent = t('report.rankTitle', { n: 8 });
     $('#pie-expense').textContent = t('type.expense');
     $('#pie-income').textContent = t('type.income');
+    renderBudget(report);
 
     // 统计卡片
     const approx = report.unified ? t('report.approx') : '';
@@ -855,6 +999,10 @@ async function renderReport() {
     // 饼图
     state.charts.pie = echarts.init($('#chart-pie'));
     renderPie(report);
+
+    // 消费排行条形图
+    state.charts.rank = echarts.init($('#chart-rank'));
+    state.charts.rank.setOption(buildRankOption(report.byCategoryExpense, state.currency));
   } catch (err) {
     toast(t('toast.reportFailed', { msg: err.message }));
     console.error(err);
@@ -869,6 +1017,43 @@ function renderPie(report) {
   state.charts.pie.setOption(buildPieOption(items, total, state.currency), true);
   $('#pie-expense').classList.toggle('active', isExpense);
   $('#pie-income').classList.toggle('active', !isExpense);
+}
+
+/* ================= 预算进度 ================= */
+
+function budgetBarHtml(name, spent, budget, approx) {
+  const pct = budget > 0 ? Math.min(100, Math.round((spent / budget) * 100)) : 0;
+  const cls = spent > budget ? 'over' : spent / budget >= 0.8 ? 'warn' : '';
+  const over = spent > budget;
+  const tail = over
+    ? t('report.budgetOver', { money: fmtMoney(spent - budget, state.currency) })
+    : t('report.budgetLeft', { money: fmtMoney(budget - spent, state.currency) });
+  const rawPct = budget > 0 ? Math.round((spent / budget) * 100) : 0;
+  return `<div class="budget-item">
+    <div class="b-name">${esc(name)}</div>
+    <div class="budget-bar-track"><div class="budget-bar-fill ${cls}" style="width:${pct}%"></div></div>
+    <div class="budget-nums ${over ? 'over' : ''}">${approx}${fmtMoney(spent, state.currency)} / ${fmtMoney(budget, state.currency)} · ${rawPct}% ${over ? '⚠ ' + tail : ''}</div>
+  </div>`;
+}
+
+function renderBudget(report) {
+  const card = $('#budget-card');
+  const hasBudget = state.budget.total > 0 || state.budget.categories.length > 0;
+  if (report.period !== 'month' || !hasBudget) {
+    card.classList.add('hidden');
+    return;
+  }
+  card.classList.remove('hidden');
+  const approx = report.unified ? t('report.approx') : '';
+  const bars = [];
+  if (state.budget.total > 0) {
+    bars.push(budgetBarHtml(t('report.budgetTotalLabel'), report.expenseTotal, state.budget.total, approx));
+  }
+  for (const b of state.budget.categories) {
+    const cat = report.byCategoryExpense.find((c) => c.name === b.name);
+    bars.push(budgetBarHtml(b.name, cat ? cat.value : 0, b.amount, approx));
+  }
+  $('#budget-bars').innerHTML = bars.join('');
 }
 
 /* ================= 设置 ================= */
@@ -892,7 +1077,45 @@ function openSettings() {
   document.querySelectorAll('#set-currency .seg').forEach((b) =>
     b.classList.toggle('active', b.dataset.cur === state.currency)
   );
+  fillBudgetUI();
   $('#modal-settings').classList.remove('hidden');
+}
+
+/* ================= 预算设置 ================= */
+
+function budgetCatRowHtml(name, amount) {
+  return `<div class="budget-cat-row">
+    <input class="bc-name" placeholder="${esc(t('settings.budgetCatPh'))}" value="${esc(name)}" />
+    <input class="bc-amount" type="number" min="0" step="0.01" placeholder="${esc(t('settings.budgetTotalPh'))}" value="${amount ? esc(amount) : ''}" />
+    <button type="button" class="b-remove">✕</button>
+  </div>`;
+}
+
+function fillBudgetUI() {
+  $('#budget-total').value = state.budget.total > 0 ? state.budget.total : '';
+  $('#budget-cats').innerHTML = state.budget.categories
+    .map((b) => budgetCatRowHtml(b.name, b.amount))
+    .join('');
+}
+
+async function saveBudget() {
+  const total = parseFloat($('#budget-total').value) || 0;
+  const cats = [];
+  document.querySelectorAll('#budget-cats .budget-cat-row').forEach((row) => {
+    const name = row.querySelector('.bc-name').value.trim();
+    const amt = parseFloat(row.querySelector('.bc-amount').value);
+    if (name && Number.isFinite(amt) && amt > 0) cats.push({ name, amount: amt });
+  });
+  try {
+    await window.api.setSetting('budget_total', String(total));
+    await window.api.setSetting('budget_categories', JSON.stringify(cats));
+    state.budget = { total, categories: cats };
+    toast(t('toast.budgetSaved'));
+    fillBudgetUI();
+    if (state.tab === 'report') renderReport();
+  } catch (err) {
+    toast(t('toast.rateInvalid'));
+  }
 }
 
 function closeSettings() {
@@ -996,7 +1219,42 @@ function bindEvents() {
   $('#rec-prev').addEventListener('click', () => shiftRecordsMonth(-1));
   $('#rec-next').addEventListener('click', () => shiftRecordsMonth(1));
   $('#rec-today').addEventListener('click', () => {
-    state.anchors.records = new Date();
+    setRecRange(today);
+    renderRecords();
+  });
+  $('#rec-reset').addEventListener('click', resetRecFilters);
+
+  // 筛选栏
+  let kwTimer = null;
+  $('#rec-keyword').addEventListener('input', (e) => {
+    clearTimeout(kwTimer);
+    kwTimer = setTimeout(() => {
+      state.recFilters.keyword = e.target.value.trim();
+      renderRecords();
+    }, 350);
+  });
+  $('#rec-cat').addEventListener('change', (e) => {
+    state.recFilters.category = e.target.value;
+    renderRecords();
+  });
+  $('#rec-type').addEventListener('change', (e) => {
+    state.recFilters.type = e.target.value;
+    renderRecords();
+  });
+  $('#rec-cur').addEventListener('change', (e) => {
+    state.recFilters.currency = e.target.value;
+    renderRecords();
+  });
+  $('#rec-start').addEventListener('change', (e) => {
+    state.recFilters.start = e.target.value;
+    if (state.recFilters.end && e.target.value > state.recFilters.end) state.recFilters.end = e.target.value;
+    $('#rec-end').value = state.recFilters.end;
+    renderRecords();
+  });
+  $('#rec-end').addEventListener('change', (e) => {
+    state.recFilters.end = e.target.value;
+    if (state.recFilters.start && e.target.value < state.recFilters.start) state.recFilters.start = e.target.value;
+    $('#rec-start').value = state.recFilters.start;
     renderRecords();
   });
 
@@ -1049,6 +1307,18 @@ function bindEvents() {
   $('#btn-clear-rate').addEventListener('click', clearManualRate);
   $('#btn-export-csv').addEventListener('click', exportCsv);
   $('#btn-backup-db').addEventListener('click', backupDb);
+  $('#btn-add-budget-cat').addEventListener('click', () => {
+    $('#budget-cats').insertAdjacentHTML('beforeend', budgetCatRowHtml('', ''));
+  });
+  $('#budget-cats').addEventListener('click', (e) => {
+    if (e.target.classList.contains('b-remove')) e.target.closest('.budget-cat-row').remove();
+  });
+  $('#btn-save-budget').addEventListener('click', saveBudget);
+
+  // 跟随系统深浅色切换重绘图表
+  darkQuery.addEventListener('change', () => {
+    if (state.tab === 'report') renderReport();
+  });
 
   window.addEventListener('resize', () => {
     for (const key of Object.keys(state.charts)) {
@@ -1068,6 +1338,7 @@ function bindEvents() {
 
 async function init() {
   $('#f-date').value = toStr(today);
+  setRecRange(today);
   bindEvents();
   try {
     const s = await window.api.getSettings();
@@ -1078,6 +1349,10 @@ async function init() {
       source: s.source || 'default',
       updatedAt: s.updatedAt || '',
       manual: s.rateManual || '',
+    };
+    state.budget = {
+      total: Number(s.budgetTotal) || 0,
+      categories: Array.isArray(s.budgetCategories) ? s.budgetCategories : [],
     };
   } catch (err) {
     console.error('加载设置失败:', err);

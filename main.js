@@ -2,7 +2,7 @@
 
 const path = require('path');
 const fs = require('fs');
-const { app, BrowserWindow, ipcMain, Menu, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, Menu, dialog, nativeTheme } = require('electron');
 const dbMod = require('./db');
 const stats = require('./stats');
 const exportMod = require('./export');
@@ -85,10 +85,18 @@ async function refreshRate() {
 }
 
 function getSettingsPayload() {
+  let budgetCategories = [];
+  try {
+    const raw = JSON.parse(dbMod.getSetting(db, 'budget_categories', '[]'));
+    if (Array.isArray(raw)) budgetCategories = raw;
+  } catch (_) {}
+  const budgetTotal = parseFloat(dbMod.getSetting(db, 'budget_total', '')) || 0;
   return {
     lang: dbMod.getSetting(db, 'lang', 'zh'),
     currency: dbMod.getSetting(db, 'currency', 'CNY'),
     rateManual: dbMod.getSetting(db, 'rate_manual', ''),
+    budgetTotal,
+    budgetCategories,
     ...effectiveRate(),
   };
 }
@@ -162,6 +170,8 @@ function registerIpc() {
   ipcMain.handle('records:list', (_e, range) =>
     dbMod.listRecords(db, String(range.start), String(range.end))
   );
+  ipcMain.handle('records:query', (_e, filters) => dbMod.queryRecords(db, filters || {}));
+  ipcMain.handle('records:categories', () => dbMod.listCategories(db));
   ipcMain.handle('records:overview', (_e, range, currency, rate) =>
     stats.overview(db, String(range.start), String(range.end), currency, rate)
   );
@@ -190,6 +200,29 @@ function registerIpc() {
       }
       dbMod.setSetting(db, 'rate_manual', value === '' ? '' : String(value));
       return { ok: true, ...effectiveRate() };
+    }
+    if (key === 'budget_total') {
+      const n = Number(value);
+      if (!Number.isFinite(n) || n < 0) throw new Error('预算必须是大于等于 0 的数字');
+      dbMod.setSetting(db, 'budget_total', String(n));
+      return { ok: true };
+    }
+    if (key === 'budget_categories') {
+      let arr;
+      try {
+        arr = JSON.parse(value);
+      } catch (_) {
+        throw new Error('预算格式无效');
+      }
+      if (!Array.isArray(arr) || arr.length > 50) throw new Error('预算格式无效');
+      for (const it of arr) {
+        if (!it || typeof it.name !== 'string' || !it.name.trim() ||
+            !Number.isFinite(Number(it.amount)) || Number(it.amount) <= 0) {
+          throw new Error('预算格式无效');
+        }
+      }
+      dbMod.setSetting(db, 'budget_categories', JSON.stringify(arr));
+      return { ok: true };
     }
     throw new Error('未知设置项');
   });
@@ -234,7 +267,7 @@ function createWindow() {
     minWidth: 1080,
     minHeight: 700,
     title: '做账',
-    backgroundColor: '#f3f5f9',
+    backgroundColor: nativeTheme.shouldUseDarkColors ? '#0e1116' : '#f3f5f9',
     show: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -301,7 +334,7 @@ async function runSmoke() {
     const near = (a, b) => Math.abs(a - b) < 0.011;
     const disp = (e) => (e.currency === 'USD' ? e.amount * RATE : e.amount);
 
-    for (const period of ['week', 'month', 'quarter']) {
+    for (const period of ['week', 'month', 'quarter', 'year']) {
       console.log(`\n[smoke] === ${period} (display CNY, rate ${RATE}) ===`);
       const range = stats.periodRange(period, todayStr);
       const report = stats.getReport(db, period, todayStr, { currency: 'CNY', rate: RATE });
@@ -339,7 +372,9 @@ async function runSmoke() {
           ? 7
           : period === 'month'
             ? new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate()
-            : null; // 季度为 13 或 14 周
+            : period === 'year'
+              ? 12
+              : null; // 季度为 13 或 14 周
       check(
         expectedLen === null
           ? report.points.length === 13 || report.points.length === 14
@@ -392,6 +427,29 @@ async function runSmoke() {
     backupDb.close();
     check(backupCount === liveCount, `db.backup 快照一致 (${backupCount} 条)`);
     try { fs.unlinkSync(backupPath); } catch (_) {}
+
+    // 筛选查询
+    console.log('\n[smoke] === query filters ===');
+    const qAll = dbMod.queryRecords(db, { start: '2000-01-01', end: '2100-12-31' });
+    check(qAll.length === entries.length, `无筛选返回全部 (${qAll.length})`);
+    const qKw = dbMod.queryRecords(db, { start: '2000-01-01', end: '2100-12-31', keyword: '购物' });
+    check(qKw.length > 0 && qKw.every((r) => r.category.includes('购物')), `关键词筛选命中 ${qKw.length} 条`);
+    const qType = dbMod.queryRecords(db, { start: '2000-01-01', end: '2100-12-31', type: 'income' });
+    check(qType.length > 0 && qType.every((r) => r.type === 'income'), `类型筛选 income=${qType.length} 条`);
+    const qCur = dbMod.queryRecords(db, { start: '2000-01-01', end: '2100-12-31', currency: 'USD' });
+    check(qCur.length > 0 && qCur.every((r) => r.currency === 'USD'), `币种筛选 USD=${qCur.length} 条`);
+    const qCombo = dbMod.queryRecords(db, { start: rangeW.start, end: rangeW.end, keyword: '购物', type: 'expense', currency: 'USD' });
+    check(qCombo.length === 1 && qCombo[0].amount === 100, `组合筛选命中 1 条`);
+    const cats = dbMod.listCategories(db);
+    check(Array.isArray(cats) && cats.includes('购物') && cats.includes('餐饮'), `分类列表 (${cats.length} 项)`);
+
+    // 预算设置
+    console.log('\n[smoke] === budget settings ===');
+    dbMod.setSetting(db, 'budget_total', '1000');
+    dbMod.setSetting(db, 'budget_categories', JSON.stringify([{ name: '购物', amount: 500 }]));
+    const payload = getSettingsPayload();
+    check(payload.budgetTotal === 1000, 'budget_total=1000');
+    check(Array.isArray(payload.budgetCategories) && payload.budgetCategories[0].name === '购物', 'budget_categories 解析正确');
 
     // 设置存取 + 有效汇率优先级
     console.log('\n[smoke] === settings & rate ===');
@@ -460,6 +518,26 @@ async function runSmoke() {
     check(ui.summaryZh.includes('总消费') && ui.summaryZh.includes('≈') && ui.summaryZh.includes('折算'), `中文总结: ${ui.summaryZh}`);
     check(ui.summaryEn.includes('Total spending') && ui.summaryEn.includes('≈'), `英文总结: ${ui.summaryEn}`);
     check(pageErrors.length === 0, `页面无控制台错误${pageErrors.length ? '：' + pageErrors.join(' | ') : ''}`);
+
+    // 访问报表页验证图表真实渲染（折线 + 饼图 + 排行）
+    const rpt = await win.webContents.executeJavaScript(`
+      (async () => {
+        document.querySelector('.tab[data-tab="report"][data-period="week"]').click();
+        await new Promise((r) => setTimeout(r, 1500));
+        return {
+          canvases: document.querySelectorAll('#chart-line canvas, #chart-pie canvas, #chart-rank canvas').length,
+          rankTitle: document.querySelector('#rank-title').textContent,
+          budgetHidden: document.querySelector('#budget-card').classList.contains('hidden'),
+          statCards: document.querySelectorAll('#stat-cards .stat-card').length,
+          lineTitle: document.querySelector('#line-title').textContent,
+        };
+      })()
+    `);
+    check(rpt.canvases === 3, `报表页渲染出 3 张图表 (${rpt.canvases})`);
+    check(rpt.statCards === 5, `统计卡片 5 张 (${rpt.statCards})`);
+    check(rpt.rankTitle.length > 0, `排行图标题: ${rpt.rankTitle}`);
+    check(rpt.budgetHidden === true, '周报不显示预算卡');
+    check(typeof rpt.lineTitle === 'string' && rpt.lineTitle.length > 0, `折线图标题: ${rpt.lineTitle}`);
     win.destroy();
 
     console.log(failures === 0 ? '\n[smoke] ALL OK' : `\n[smoke] FAILED (${failures})`);

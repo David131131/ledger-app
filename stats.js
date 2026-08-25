@@ -117,12 +117,24 @@ function periodRange(period, anchorStr) {
       prevEnd: toStr(prevEnd),
     };
   }
+  if (period === 'year') {
+    const start = new Date(anchor.getFullYear(), 0, 1);
+    const end = new Date(anchor.getFullYear(), 11, 31);
+    const prevStart = new Date(anchor.getFullYear() - 1, 0, 1);
+    const prevEnd = new Date(anchor.getFullYear() - 1, 11, 31);
+    return {
+      start: toStr(start),
+      end: toStr(end),
+      prevStart: toStr(prevStart),
+      prevEnd: toStr(prevEnd),
+    };
+  }
   throw new Error(`unknown period: ${period}`);
 }
 
 /**
  * 周期内的图表分桶（语言无关的结构化数据）：
- * 周 -> 7 天 {date, dow}；月 -> 每天 {date, day}；季度 -> 每周 {date, m, d}
+ * 周 -> 7 天 {date, dow}；月 -> 每天 {date, day}；季度 -> 每周 {date, m, d}；年 -> 每月 {date, m}
  */
 function bucketsFor(period, start, end) {
   const s = parse(start);
@@ -136,6 +148,11 @@ function bucketsFor(period, start, end) {
   } else if (period === 'month') {
     for (let d = s; d <= e; d = addDays(d, 1)) {
       out.push({ date: toStr(d), day: d.getDate() });
+    }
+  } else if (period === 'year') {
+    for (let m = 0; m < 12; m++) {
+      const d = new Date(s.getFullYear(), m, 1);
+      out.push({ date: toStr(d), m: m + 1 });
     }
   } else {
     let w = mondayOf(s);
@@ -201,7 +218,7 @@ function summarize(rows, displayCurrency, rate) {
 
 /**
  * @param {import('better-sqlite3').Database} db
- * @param {'week'|'month'|'quarter'} period
+ * @param {'week'|'month'|'quarter'|'year'} period
  * @param {string} anchorStr 'YYYY-MM-DD'
  * @param {{currency?: 'CNY'|'USD', rate?: number}} [opts]
  */

@@ -119,6 +119,43 @@ function listRecords(db, start, end) {
     .all(start, end);
 }
 
+/** 带筛选条件的记录查询（关键词 / 分类 / 类型 / 币种 / 日期区间） */
+function queryRecords(db, f = {}) {
+  const where = ['date BETWEEN ? AND ?'];
+  const params = [String(f.start), String(f.end)];
+  const kw = String(f.keyword || '').trim();
+  if (kw) {
+    where.push('(category LIKE ? OR path LIKE ? OR note LIKE ?)');
+    const like = `%${kw}%`;
+    params.push(like, like, like);
+  }
+  if (f.category) {
+    where.push('category = ?');
+    params.push(String(f.category));
+  }
+  if (f.type === 'expense' || f.type === 'income') {
+    where.push('type = ?');
+    params.push(f.type);
+  }
+  if (f.currency === 'CNY' || f.currency === 'USD') {
+    where.push('currency = ?');
+    params.push(f.currency);
+  }
+  return db
+    .prepare(
+      `SELECT * FROM records WHERE ${where.join(' AND ')} ORDER BY date DESC, id DESC LIMIT 1000`
+    )
+    .all(...params);
+}
+
+/** 全部分类（按使用频次排序），用于筛选下拉框 */
+function listCategories(db) {
+  return db
+    .prepare('SELECT category FROM records GROUP BY category ORDER BY COUNT(*) DESC, category')
+    .all()
+    .map((r) => r.category);
+}
+
 /* ---------------- 设置 ---------------- */
 
 function getSetting(db, key, fallback = null) {
@@ -146,6 +183,8 @@ module.exports = {
   updateRecord,
   deleteRecord,
   listRecords,
+  queryRecords,
+  listCategories,
   getSetting,
   setSetting,
   getAllSettings,

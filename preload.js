@@ -8,6 +8,8 @@ contextBridge.exposeInMainWorld('api', {
   updateRecord: (id, rec) => ipcRenderer.invoke('records:update', id, rec),
   deleteRecord: (id) => ipcRenderer.invoke('records:delete', id),
   listRecords: (range) => ipcRenderer.invoke('records:list', range),
+  queryRecords: (filters) => ipcRenderer.invoke('records:query', filters),
+  listCategories: () => ipcRenderer.invoke('records:categories'),
   overview: (range, currency, rate) => ipcRenderer.invoke('records:overview', range, currency, rate),
   getReport: (period, anchor, currency, rate) =>
     ipcRenderer.invoke('report:get', { period, anchor, currency, rate }),
