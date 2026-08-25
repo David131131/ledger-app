@@ -132,6 +132,28 @@ node-gyp 源码编译会失败，因此 `npm run rebuild` 使用 `scripts/fetch-
   git -c url."https://ghfast.top/https://github.com/".insteadOf="https://github.com/" fetch origin main
   ```
 
+## 打包发布（electron-builder）
+
+```bash
+npm install
+npm run rebuild      # 确保 better-sqlite3 是 Electron ABI 的预编译二进制
+npm run dist         # 产出 release/做账-<版本>-arm64.dmg 与 .zip
+```
+
+- 产物是**自包含应用**：不依赖源码目录与 node_modules，数据库沿用
+  `~/Library/Application Support/做账/ledger.db`（与开发版同一份数据）
+- 原生模块自动解包（app.asar.unpacked），ECharts 已内置（renderer/echarts.min.js）
+- 无 Apple 开发者证书时使用 **ad-hoc 签名**（`mac.identity: "-"`）：
+  本机可直接双击运行；发给别人首次打开需右键 → 打开（未公证）
+- 国内网络打包注意：
+  ```bash
+  export ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/
+  export electron_config_cache="$PWD/.electron-cache"        # Electron 安装包缓存
+  export ELECTRON_BUILDER_CACHE="$PWD/.electron-builder-cache"  # 打包工具缓存
+  ```
+  dmgbuild 工具包可从 ghfast 代理预置：
+  `.electron-builder-cache/dmg-builder@1.2.5/dmgbuild-bundle-arm64-75c8a6c.tar.gz`
+
 ## 统计口径
 
 - **周**：周一至周日（ISO 周），环比上周

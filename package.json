@@ -1,25 +1,62 @@
 {
   "name": "zuozhang",
   "productName": "做账",
-  "version": "1.0.0",
-  "description": "本地记账应用：SQLite 存储，周/月/季度可视化账单",
+  "version": "1.1.0",
+  "description": "本地记账应用：SQLite 存储，周/月/季/年可视化账单，双语与双币种",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "smoke": "electron . --smoke-test",
-    "rebuild": "node scripts/fetch-better-sqlite3.js"
+    "rebuild": "node scripts/fetch-better-sqlite3.js",
+    "dist": "electron-builder --mac"
   },
   "license": "MIT",
   "dependencies": {
-    "better-sqlite3": "^12.0.0",
-    "echarts": "^5.6.0"
+    "better-sqlite3": "^12.0.0"
   },
   "devDependencies": {
     "@electron/rebuild": "^3.7.1",
-    "electron": "^37.0.0"
+    "echarts": "^5.6.0",
+    "electron": "^37.0.0",
+    "electron-builder": "^26.0.12"
   },
   "allowScripts": {
     "electron@37.10.3": true,
     "better-sqlite3@12.11.1": true
+  },
+  "build": {
+    "appId": "com.zuozhang.ledger",
+    "productName": "做账",
+    "asar": true,
+    "npmRebuild": false,
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "db.js",
+      "stats.js",
+      "export.js",
+      "renderer/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.finance",
+      "icon": "assets/icon.icns",
+      "identity": "-",
+      "target": ["dmg", "zip"],
+      "darkModeSupport": true,
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
+    },
+    "dmg": {
+      "title": "做账 ${version}",
+      "icon": "assets/icon.icns",
+      "contents": [
+        { "x": 130, "y": 220 },
+        { "x": 410, "y": 220, "type": "link", "path": "/Applications" }
+      ]
+    }
   }
 }
