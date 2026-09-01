@@ -57,6 +57,16 @@ function round2(n) {
   return Math.round(n * 100) / 100;
 }
 
+/**
+ * 把记录日期归到所属分桶的键：
+ * 周报/月报按天（date 本身）；季报归到所在周的周一；年报归到所在月 1 号。
+ */
+function bucketKey(dateStr, period) {
+  if (period === 'quarter') return toStr(mondayOf(parse(dateStr)));
+  if (period === 'year') return dateStr.slice(0, 8) + '01';
+  return dateStr;
+}
+
 /* ---------------- 汇率 ---------------- */
 
 function normalizeRate(rate) {
@@ -239,10 +249,11 @@ function getReport(db, period, anchorStr, opts = {}) {
   const buckets = bucketsFor(period, range.start, range.end);
   const byDate = new Map();
   for (const r of rows) {
-    let b = byDate.get(r.date);
+    const key = bucketKey(r.date, period);
+    let b = byDate.get(key);
     if (!b) {
       b = { expense: 0, income: 0 };
-      byDate.set(r.date, b);
+      byDate.set(key, b);
     }
     const amt = convertAmount(r.amount, r.currency, displayCurrency, rate);
     if (r.type === 'expense') b.expense += amt;

@@ -383,6 +383,18 @@ async function runSmoke() {
       );
       check(Array.isArray(report.byCategoryExpense) && report.byCategoryExpense.length > 0, `byCategoryExpense=${report.byCategoryExpense.length} 项`);
       if (period === 'week') check(report.prevPoints && report.prevPoints.length === 7, 'prevPoints=7（周报对比线）');
+      // 折线图分桶总和必须等于总支出（防止分桶映射错误）
+      const pointsSum = report.points.reduce((a, p) => a + p.expense, 0);
+      check(near(pointsSum, report.expenseTotal), `分桶支出总和=${pointsSum} ≈ expenseTotal=${report.expenseTotal}`);
+      if (period === 'year') {
+        // 年报：本月（非 1 号）记录应归入当月桶
+        const thisMonthKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-01`;
+        const monthPoint = report.points.find((p) => p.date === thisMonthKey);
+        const monthExp = entries
+          .filter((e) => e.date.startsWith(thisMonthKey.slice(0, 7)) && e.type === 'expense')
+          .reduce((a, e) => a + disp(e), 0);
+        check(monthPoint && near(monthPoint.expense, monthExp), `年报当月桶=${monthPoint ? monthPoint.expense : '无'} 期望 ${Math.round(monthExp * 100) / 100}`);
+      }
       console.log(`  范围: ${range.start} ~ ${range.end} | 总支出 ${report.expenseTotal} | 混合币种 ${report.unified}`);
     }
 
