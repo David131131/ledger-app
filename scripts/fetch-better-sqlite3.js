@@ -2,7 +2,10 @@
 
 /**
  * 为当前 Electron 版本安装 better-sqlite3 的官方预编译二进制。
- * 用法：npm run rebuild
+ * 用法：
+ *   npm run rebuild                              # 当前平台/架构（开发用）
+ *   node scripts/fetch-better-sqlite3.js win32-x64   # 指定平台-架构（跨平台打包用）
+ *   平台-架构取值：darwin-arm64 / darwin-x64 / win32-x64 / win32-arm64 / linux-x64 ...
  *
  * 说明：本项目路径含空格时，node-gyp 源码编译会失败；
  * 且直接下载 GitHub 发布包在部分网络下超时，因此这里：
@@ -50,8 +53,12 @@ function getElectronAbi() {
 function main() {
   const pkg = require(path.join(MODULE_DIR, 'package.json'));
   const abi = getElectronAbi();
-  const platform = process.platform;
-  const arch = os.arch();
+  // 支持显式指定平台-架构（跨平台打包），如 win32-x64 / win32-arm64
+  const target = process.argv[2] || `${process.platform}-${os.arch()}`;
+  const m = /^([a-z0-9]+)-([a-z0-9_]+)$/.exec(target);
+  if (!m) throw new Error(`无法识别的平台-架构: ${target}`);
+  const platform = m[1];
+  const arch = m[2];
   const asset = `better-sqlite3-v${pkg.version}-electron-v${abi}-${platform}-${arch}.tar.gz`;
   const urls = [
     `https://ghfast.top/https://github.com/WiseLibs/better-sqlite3/releases/download/v${pkg.version}/${asset}`,

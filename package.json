@@ -9,7 +9,7 @@
     "smoke": "electron . --smoke-test",
     "rebuild": "node scripts/fetch-better-sqlite3.js",
     "dist": "electron-builder --mac",
-    "dist:win": "electron-builder --win"
+    "dist:win": "node scripts/fetch-better-sqlite3.js win32-x64 && electron-builder --win nsis --x64 && node scripts/fetch-better-sqlite3.js win32-arm64 && electron-builder --win nsis --arm64 && node scripts/fetch-better-sqlite3.js darwin-arm64"
   },
   "license": "MIT",
   "dependencies": {
@@ -62,9 +62,10 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "installerLanguages": ["zh_CN", "en_US"],
-      "language": "2052",
-      "shortcutName": "做账"
+      "multiLanguageInstaller": true,
+      "installerLanguages": ["en_US", "zh_CN"],
+      "shortcutName": "做账",
+      "include": "scripts/installer.nsh"
     },
     "dmg": {
       "title": "做账 ${version}",
