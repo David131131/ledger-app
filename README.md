@@ -137,13 +137,21 @@ node-gyp 源码编译会失败，因此 `npm run rebuild` 使用 `scripts/fetch-
 ```bash
 npm install
 npm run rebuild      # 确保 better-sqlite3 是 Electron ABI 的预编译二进制
-npm run dist         # 产出 release/做账-<版本>-arm64.dmg 与 .zip
+npm run dist         # macOS：release/做账-<版本>-arm64.dmg 与 .zip
+npm run dist:win     # Windows：release/做账-<版本>-setup-x64.exe 与 -setup-arm64.exe
 ```
 
-- 产物是**自包含应用**：不依赖源码目录与 node_modules，数据库沿用
-  `~/Library/Application Support/做账/ledger.db`（与开发版同一份数据）
+- 产物是**自包含应用**：不依赖源码目录与 node_modules；数据库位于
+  `~/Library/Application Support/做账/ledger.db`（macOS）/ `%APPDATA%\做账`（Windows）
 - 原生模块自动解包（app.asar.unpacked），ECharts 已内置（renderer/echarts.min.js）
-- 无 Apple 开发者证书时使用 **ad-hoc 签名**（`mac.identity: "-"`）：
+- **Windows 打包必须用 `npm run dist:win`**：按 x64/arm64 分别下载对应 win32 预编译
+  better-sqlite3 再打包（直接 `electron-builder --win` 会把 macOS 二进制打进去导致
+  启动即崩溃），流水线结束自动恢复 darwin 版
+- **Windows 安装器**：双语向导（English/中文，`multiLanguageInstaller`），
+  默认安装到 `%LOCALAPPDATA%\Programs\zuozhang`（ASCII 路径，`scripts/installer.nsh`）
+- **Windows SmartScreen**：无代码签名证书，首次运行会提示
+  「Windows 已保护你的电脑」→ 点「更多信息」→「仍要运行」
+- macOS 无 Apple 开发者证书时使用 **ad-hoc 签名**（`mac.identity: "-"`）：
   本机可直接双击运行；发给别人首次打开需右键 → 打开（未公证）
 - 国内网络打包注意：
   ```bash
