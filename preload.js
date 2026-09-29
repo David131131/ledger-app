@@ -18,4 +18,9 @@ contextBridge.exposeInMainWorld('api', {
   refreshRate: () => ipcRenderer.invoke('rate:refresh'),
   exportCsv: () => ipcRenderer.invoke('data:exportCsv'),
   backupDb: () => ipcRenderer.invoke('data:backupDb'),
+  onRecordsChanged: (callback) => {
+    const listener = () => callback();
+    ipcRenderer.on('records:changed', listener);
+    return () => ipcRenderer.removeListener('records:changed', listener);
+  },
 });

@@ -6,10 +6,52 @@ const { app, BrowserWindow, ipcMain, Menu, dialog, nativeTheme } = require('elec
 const dbMod = require('./db');
 const stats = require('./stats');
 const exportMod = require('./export');
+const mobileMod = require('./mobile-server');
 
 const IS_SMOKE = process.argv.includes('--smoke-test');
+const IS_MOBILE_TEST = process.argv.includes('--mobile-test');
 let db = null;
 let mainWindow = null;
+let mobileServer = null;
+
+async function enableMobile() {
+  if (!mobileServer) mobileServer = await mobileMod.startMobileServer(db, {
+    onChange: () => {
+      if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('records:changed');
+    },
+  });
+  dbMod.setSetting(db, 'mobile_enabled', '1');
+}
+
+async function showMobile() {
+  const { response } = await dialog.showMessageBox({
+    type: 'info', title: '手机同步 / Mobile Sync',
+    message: mobileServer ? '手机同步服务已开启' : '启用手机离线记账和同步',
+    detail: `手机账单将写入当前电脑账本：\n${db.name}\n\n电脑关机或休眠时，手机先暂存；电脑恢复、应用运行并打开手机网页后自动同步。\n\n外出使用：电脑和手机登录同一 Tailscale 网络，在电脑运行：\ntailscale serve --bg http://127.0.0.1:${mobileMod.PORT}\n然后在手机打开它返回的 HTTPS 地址，输入连接密钥并添加到主屏幕。`,
+    buttons: [mobileServer ? '查看连接密钥' : '开启并查看密钥', '关闭同步服务', '返回'],
+    defaultId: 0, cancelId: 2,
+  });
+  if (response === 2) return;
+  if (response === 1) {
+    dbMod.setSetting(db, 'mobile_enabled', '0');
+    if (mobileServer) { mobileServer.close(); mobileServer.closeAllConnections(); mobileServer = null; }
+    return;
+  }
+  try {
+    await enableMobile();
+    const { token } = mobileMod.identity(db);
+    const result = await dialog.showMessageBox({
+      title: '手机连接密钥', message: '在手机网页中输入此密钥',
+      detail: `${token}\n\n电脑预览：http://127.0.0.1:${mobileMod.PORT}\n手机请使用 Tailscale Serve 返回的 HTTPS 地址。密钥仅交给自己的设备。\n\n重置密钥会撤销旧密钥，手机重新连接同一账本后可继续同步待处理记录。`,
+      buttons: ['复制密钥', '重置密钥', '完成'], cancelId: 2,
+    });
+    if (result.response === 0) require('electron').clipboard.writeText(token);
+    if (result.response === 1) {
+      dbMod.setSetting(db, 'mobile_token', require('crypto').randomBytes(32).toString('hex'));
+      await showMobile();
+    }
+  } catch (err) { dialog.showErrorBox('手机同步启动失败', err.message); }
+}
 
 /* ---------------- 输入校验 ---------------- */
 
@@ -125,6 +167,7 @@ function createMenu(lang) {
       label: t.app,
       submenu: [
         { role: 'about', label: t.about },
+        { label: '手机同步 / Mobile Sync…', click: () => { void showMobile(); } },
         { type: 'separator' },
         { role: 'hide', label: t.hide },
         { role: 'quit', label: t.quit },
@@ -588,7 +631,7 @@ async function runSmoke() {
 /* ---------------- 启动 ---------------- */
 
 // 单实例锁：双击多次不会开多个窗口，第二次启动会聚焦已有窗口
-if (!IS_SMOKE) {
+if (!IS_SMOKE && !IS_MOBILE_TEST) {
   const gotLock = app.requestSingleInstanceLock();
   if (!gotLock) {
     app.quit();
@@ -604,6 +647,10 @@ if (!IS_SMOKE) {
 }
 
 app.whenReady().then(() => {
+  if (IS_MOBILE_TEST) {
+    require('./scripts/test-mobile').run().then(() => app.exit(0)).catch(err => { console.error(err); app.exit(1); });
+    return;
+  }
   registerIpc();
   if (IS_SMOKE) {
     runSmoke();
@@ -626,13 +673,20 @@ app.whenReady().then(() => {
   const lang = dbMod.getSetting(db, 'lang', 'zh');
   createMenu(lang);
   createWindow();
+  if (dbMod.getSetting(db, 'mobile_enabled') === '1') {
+    enableMobile().catch(err => dialog.showErrorBox('手机同步启动失败', err.message));
+  }
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
 });
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit();
+  if (!IS_MOBILE_TEST && process.platform !== 'darwin') app.quit();
+});
+
+app.on('before-quit', () => {
+  if (mobileServer) { mobileServer.close(); mobileServer.closeAllConnections(); mobileServer = null; }
 });
 
 process.on('uncaughtException', (err) => {

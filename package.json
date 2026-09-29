@@ -1,12 +1,13 @@
 {
   "name": "zuozhang",
   "productName": "做账",
-  "version": "1.1.0",
+  "version": "1.2.1",
   "description": "本地记账应用：SQLite 存储，周/月/季/年可视化账单，双语与双币种",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "smoke": "electron . --smoke-test",
+    "test:mobile": "electron . --mobile-test",
     "rebuild": "node scripts/fetch-better-sqlite3.js",
     "dist": "electron-builder --mac",
     "dist:win": "node scripts/fetch-better-sqlite3.js win32-x64 && electron-builder --win nsis --x64 && node scripts/fetch-better-sqlite3.js win32-arm64 && electron-builder --win nsis --arm64 && node scripts/fetch-better-sqlite3.js darwin-arm64"
@@ -39,6 +40,8 @@
       "db.js",
       "stats.js",
       "export.js",
+      "mobile-server.js",
+      "mobile/**/*",
       "renderer/**/*",
       "assets/**/*",
       "package.json"

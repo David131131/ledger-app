@@ -1376,3 +1376,10 @@ window.zz = {
 };
 
 init();
+
+// Phone writes use the same DB; refresh the visible view without interrupting form input.
+window.api.onRecordsChanged?.(() => {
+  if ($('#page-add').classList.contains('active')) refreshOverview();
+  if ($('#page-records').classList.contains('active')) renderRecords();
+  if ($('#page-report').classList.contains('active')) renderReport();
+});
